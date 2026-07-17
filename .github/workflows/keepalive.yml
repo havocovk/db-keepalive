@@ -1,0 +1,44 @@
+name: Database Keepalive
+
+on:
+  schedule:
+    - cron: '0 5 * * *'   # 08:00 TR (UTC+3)
+    - cron: '0 11 * * *'  # 14:00 TR
+    - cron: '0 14 * * *'  # 17:00 TR
+    - cron: '0 19 * * *'  # 22:00 TR
+  workflow_dispatch:
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Random delay (0-45 dakika)
+        run: sleep $((RANDOM % 2700))
+
+      - name: Supabase ping - tango-class-management-system
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "apikey: ${{ secrets.SUPABASE_KEY_TCMS }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_KEY_TCMS }}" \
+            "https://wriwmvxgfstishfsvjae.supabase.co/rest/v1/students?select=id&limit=1")
+          echo "TCMS status: $STATUS"
+          if [ "$STATUS" != "200" ]; then echo "UYARI: TCMS ping başarısız ($STATUS)"; fi
+
+      - name: Supabase ping - tango-reels-library
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "apikey: ${{ secrets.SUPABASE_KEY_REELS }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_KEY_REELS }}" \
+            "https://coasifpuxnykgswnjguh.supabase.co/rest/v1/videos?select=id&limit=1")
+          echo "Reels status: $STATUS"
+          if [ "$STATUS" != "200" ]; then echo "UYARI: Reels ping başarısız ($STATUS)"; fi
+
+      - name: AppWrite ping - ebook-catalog
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "x-appwrite-project: 6a2f3ae5000560f23d0c" \
+            -H "x-appwrite-key: ${{ secrets.APPWRITE_KEY_EBOOK }}" \
+            "https://fra.cloud.appwrite.io/v1/databases")
+          echo "AppWrite status: $STATUS"
+          if [ "$STATUS" != "200" ]; then echo "UYARI: AppWrite ping başarısız ($STATUS)"; fi
