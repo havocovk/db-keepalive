@@ -17,28 +17,75 @@ jobs:
         run: sleep $((RANDOM % 2700))
 
       - name: Supabase ping - tango-class-management-system
+        id: tcms
         run: |
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
             -H "apikey: ${{ secrets.SUPABASE_KEY_TCMS }}" \
             -H "Authorization: Bearer ${{ secrets.SUPABASE_KEY_TCMS }}" \
             "https://wriwmvxgfstishfsvjae.supabase.co/rest/v1/students?select=id&limit=1")
           echo "TCMS status: $STATUS"
-          if [ "$STATUS" != "200" ]; then echo "UYARI: TCMS ping başarısız ($STATUS)"; fi
+          echo "status=$STATUS" >> $GITHUB_OUTPUT
+          if [ "$STATUS" != "200" ]; then
+            echo "UYARI: TCMS ping başarısız ($STATUS)"
+            echo "result=❌ Başarısız ($STATUS)" >> $GITHUB_OUTPUT
+          else
+            echo "result=✅ Başarılı" >> $GITHUB_OUTPUT
+          fi
 
       - name: Supabase ping - tango-reels-library
+        id: reels
         run: |
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
             -H "apikey: ${{ secrets.SUPABASE_KEY_REELS }}" \
             -H "Authorization: Bearer ${{ secrets.SUPABASE_KEY_REELS }}" \
             "https://coasifpuxnykgswnjguh.supabase.co/rest/v1/videos?select=id&limit=1")
           echo "Reels status: $STATUS"
-          if [ "$STATUS" != "200" ]; then echo "UYARI: Reels ping başarısız ($STATUS)"; fi
+          echo "status=$STATUS" >> $GITHUB_OUTPUT
+          if [ "$STATUS" != "200" ]; then
+            echo "UYARI: Reels ping başarısız ($STATUS)"
+            echo "result=❌ Başarısız ($STATUS)" >> $GITHUB_OUTPUT
+          else
+            echo "result=✅ Başarılı" >> $GITHUB_OUTPUT
+          fi
 
       - name: AppWrite ping - ebook-catalog
+        id: ebook
         run: |
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
             -H "x-appwrite-project: 6a2f3ae5000560f23d0c" \
             -H "x-appwrite-key: ${{ secrets.APPWRITE_KEY_EBOOK }}" \
             "https://fra.cloud.appwrite.io/v1/databases")
           echo "AppWrite status: $STATUS"
-          if [ "$STATUS" != "200" ]; then echo "UYARI: AppWrite ping başarısız ($STATUS)"; fi
+          echo "status=$STATUS" >> $GITHUB_OUTPUT
+          if [ "$STATUS" != "200" ]; then
+            echo "UYARI: AppWrite ping başarısız ($STATUS)"
+            echo "result=❌ Başarısız ($STATUS)" >> $GITHUB_OUTPUT
+          else
+            echo "result=✅ Başarılı" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Email bildirimi gönder
+        if: always()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: orhanveli.kazanci@gmail.com
+          password: ${{ secrets.GMAIL_APP_PASSWORD }}
+          to: orhanveli.kazanci@gmail.com
+          from: Database Keepalive <orhanveli.kazanci@gmail.com>
+          subject: "🗄️ Veritabanı Ping Raporu - ${{ github.run_started_at }}"
+          body: |
+            Merhaba Orhan,
+
+            Veritabanı ping işlemleri tamamlandı.
+
+            📊 SONUÇLAR:
+            ──────────────────────────────
+            • TCMS (Supabase):         ${{ steps.tcms.outputs.result }}
+            • Tango Reels (Supabase):  ${{ steps.reels.outputs.result }}
+            • Ebook Catalog (AppWrite): ${{ steps.ebook.outputs.result }}
+            ──────────────────────────────
+
+            GitHub Actions: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
